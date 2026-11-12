@@ -1,0 +1,6 @@
+stop_id,route_id,stop_order,stop_name,latitude,longitude,note
+MVSR-STOP-01,MVSR-ROUTE-01,1,Test Stop 01,,,Coordinates intentionally blank; add verified coordinates.
+MVSR-STOP-02,MVSR-ROUTE-01,2,Test Stop 02,,,Coordinates intentionally blank; add verified coordinates.
+MVSR-STOP-03,MVSR-ROUTE-01,3,Test Stop 03,,,Coordinates intentionally blank; add verified coordinates.
+MVSR-STOP-04,MVSR-ROUTE-01,4,Test Stop 04,,,Coordinates intentionally blank; add verified coordinates.
+MVSR-STOP-05,MVSR-ROUTE-01,5,Test Stop 05,,,Coordinates intentionally blank; add verified coordinates.

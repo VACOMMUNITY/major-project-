@@ -1,0 +1,14 @@
+[functions.student-login]
+verify_jwt = false
+
+[functions.parent-login]
+verify_jwt = false
+
+[functions.dashboard-login]
+verify_jwt = false
+
+[functions.transport-service]
+verify_jwt = true
+
+[functions.face-verification]
+verify_jwt = true

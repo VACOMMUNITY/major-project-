@@ -1,0 +1,2 @@
+route_id,route_name,assigned_driver_id,vehicle_id,route_status,note
+MVSR-ROUTE-01,MVSR Test Campus Route,MVSR-DRV-001,TEST-BUS-001,TEST_ONLY,Placeholder route; add verified stops and coordinates before GPS testing.

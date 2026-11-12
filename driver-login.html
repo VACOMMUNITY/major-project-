@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>IntelliBus Driver Login</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:"Inter",sans-serif;
+}
+
+body{
+background:linear-gradient(135deg,#020B24,#071A3D);
+color:white;
+min-height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+padding:20px;
+overflow:hidden;
+}
+
+.glow1,.glow2{
+position:absolute;
+border-radius:50%;
+filter:blur(90px);
+opacity:.35;
+}
+
+.glow1{
+width:280px;
+height:280px;
+background:#2563EB;
+top:-80px;
+left:-80px;
+}
+
+.glow2{
+width:300px;
+height:300px;
+background:#06B6D4;
+bottom:-100px;
+right:-80px;
+}
+
+.container{
+position:relative;
+z-index:2;
+width:100%;
+max-width:520px;
+}
+
+.login-card{
+background:rgba(16,26,56,.92);
+backdrop-filter:blur(20px);
+border:1px solid rgba(255,255,255,.08);
+border-radius:30px;
+padding:35px;
+box-shadow:0 20px 50px rgba(0,0,0,.45);
+}
+
+.logo{
+text-align:center;
+font-size:36px;
+font-weight:800;
+margin-bottom:10px;
+}
+
+.subtitle{
+text-align:center;
+color:#94A3B8;
+margin-bottom:30px;
+}
+
+.role-grid{
+display:grid;
+grid-template-columns:1fr;
+gap:18px;
+margin-bottom:25px;
+}
+
+.role-card{
+width:100%;
+color:inherit;
+text-align:left;
+font:inherit;
+background:#111B3A;
+border:2px solid transparent;
+border-radius:22px;
+padding:22px;
+cursor:pointer;
+transition:.3s;
+display:flex;
+align-items:center;
+gap:18px;
+}
+
+.role-card:hover{
+transform:translateY(-4px);
+border-color:#06B6D4;
+box-shadow:0 0 20px rgba(6,182,212,.25);
+}
+
+.role-card.active{
+border-color:#06B6D4;
+background:linear-gradient(135deg,#143D86,#0A7EA4);
+}
+
+.icon{
+width:60px;
+height:60px;
+border-radius:18px;
+display:flex;
+justify-content:center;
+align-items:center;
+font-size:30px;
+background:rgba(255,255,255,.08);
+}
+
+.role-card h3{
+font-size:20px;
+margin-bottom:4px;
+}
+
+.role-card p{
+color:#CBD5E1;
+font-size:14px;
+}
+
+.input-group{
+margin-bottom:18px;
+}
+
+.input-group label{
+display:block;
+margin-bottom:8px;
+color:#CBD5E1;
+font-size:14px;
+}
+
+.input-group input{
+width:100%;
+padding:15px;
+border:none;
+outline:none;
+border-radius:15px;
+background:#0B1530;
+color:white;
+font-size:15px;
+border:1px solid rgba(255,255,255,.08);
+}
+
+.login-btn{
+width:100%;
+padding:16px;
+border:none;
+border-radius:16px;
+background:linear-gradient(135deg,#2563EB,#06B6D4);
+color:white;
+font-size:17px;
+font-weight:700;
+cursor:pointer;
+transition:.3s;
+margin-top:8px;
+}
+
+.login-btn:hover{
+transform:translateY(-3px);
+box-shadow:0 10px 25px rgba(37,99,235,.35);
+}
+
+.footer{
+text-align:center;
+margin-top:18px;
+color:#94A3B8;
+font-size:13px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="glow1"></div>
+<div class="glow2"></div>
+
+<div class="container">
+
+<div class="login-card">
+
+<div class="logo">🚌 IntelliBus</div>
+<div class="subtitle">Select Driver Type and Sign In</div>
+
+<div class="role-grid">
+
+<button class="role-card active" type="button" onclick="selectRole(this,'college')">
+<div class="icon">🎓</div>
+<div>
+<h3>School & College Driver</h3>
+<p>Student Bus Transport • QR Attendance • Campus Routes</p>
+</div>
+</button>
+
+<button class="role-card" type="button" onclick="selectRole(this,'company')">
+<div class="icon">🏢</div>
+<div>
+<h3>Company Driver</h3>
+<p>Employee Shuttle • Office Pickup • Corporate Routes</p>
+</div>
+</button>
+
+</div>
+
+<div class="input-group">
+<label>Driver ID</label>
+<input type="text" id="driverId" placeholder="Enter Driver ID">
+</div>
+
+<div class="input-group">
+<label>Password</label>
+<input type="password" id="password" placeholder="Enter Password">
+</div>
+
+<button class="login-btn" onclick="loginDriver()">
+Sign In
+</button>
+
+<div class="footer">
+Secure Driver Authentication • IntelliBus
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+let selectedRole="college";
+
+function selectRole(card,role){
+
+document.querySelectorAll(".role-card").forEach(c=>{
+c.classList.remove("active");
+});
+
+card.classList.add("active");
+
+selectedRole=role;
+
+}
+
+function loginDriver(){
+
+const id=document.getElementById("driverId").value.trim();
+const pass=document.getElementById("password").value.trim();
+
+if(id==="" || pass===""){
+alert("Please enter Driver ID and Password.");
+return;
+}
+
+sessionStorage.setItem("driverId",id);
+sessionStorage.setItem("driverType",selectedRole);
+
+if(selectedRole==="college"){
+
+window.location.href="ui/login.html?role=engineering-driver";
+
+}else{
+
+window.location.href="ui/login.html?role=company-driver";
+
+}
+
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+Item,Details
+Purpose,Synthetic test records for local development only.
+Institution,MVSR Engineering College is only a requested test label. This is NOT an official college roster.
+Student IDs,123 records: 2451-23-737-001 through 2451-23-737-123.
+Student password,"For testing only, each password_test_only equals that student's student_id."
+Fixed driver ID,MVSR-DRV-001
+Driver test password,Driver@123
+Parent test accounts,Synthetic parent accounts mapped one-to-one to the corresponding synthetic student; password Parent@123.
+Route,MVSR-ROUTE-01 with five placeholder stops. Coordinates are blank.
+Security,Never use these predictable passwords in production. Never store plaintext passwords in Supabase tables. Use Supabase Auth or a secure backend.
+Privacy,All names and emails are synthetic. Do not import actual student personal information without authorization.
+Biometrics,"Do not enroll real faces using this test dataset. Obtain informed consent and guardian consent where applicable, and use real server-side verification."
+GPS/attendance,"Use test locations only until verified routes, QR issuance, driver assignment and permissions are configured."
+Import guidance,Ask the coding agent to inspect the actual schema and create a safe seed script matching existing tables. Do not blindly import these columns.
