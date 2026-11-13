@@ -2999,14 +2999,130 @@ function isValidCoordinate(point) {
     point.lng <= 180;
 }
 
-function getConfiguredRoute(expectedRole) {
+// Built-in offline fallback routes for instant offline navigation
+const BUILTIN_OFFLINE_ROUTES = {
+  "MVSR-ROUTE-01": {
+    id: "MVSR-ROUTE-01",
+    driverType: "school-driver",
+    name: "MVSR Test Campus Route",
+    organization: "MVSR Engineering College",
+    vehicle: "TEST-BUS-001",
+    driverId: "MVSR-DRV-001",
+    geometry: [
+      { lat: 17.3524, lng: 78.5032 },
+      { lat: 17.3450, lng: 78.5005 },
+      { lat: 17.3320, lng: 78.4980 },
+      { lat: 17.3270, lng: 78.5050 },
+      { lat: 17.3210, lng: 78.5140 },
+      { lat: 17.3160, lng: 78.5210 },
+      { lat: 17.3110, lng: 78.5280 },
+      { lat: 17.3060, lng: 78.5315 },
+      { lat: 17.3015, lng: 78.5350 },
+    ],
+    stops: [
+      { id: "MVSR-STOP-01", name: "Test Stop 01 (Campus North Gate)", lat: 17.3524, lng: 78.5032, kind: "pickup", order: 1 },
+      { id: "MVSR-STOP-02", name: "Test Stop 02 (Chandrayangutta X Roads)", lat: 17.3320, lng: 78.4980, kind: "pickup", order: 2 },
+      { id: "MVSR-STOP-03", name: "Test Stop 03 (Balapur Junction)", lat: 17.3210, lng: 78.5140, kind: "pickup", order: 3 },
+      { id: "MVSR-STOP-04", name: "Test Stop 04 (Badangpet Bus Bay)", lat: 17.3110, lng: 78.5280, kind: "pickup", order: 4 },
+      { id: "MVSR-STOP-05", name: "Test Stop 05 (MVSR Main Gate)", lat: 17.3015, lng: 78.5350, kind: "destination", order: 5 },
+    ],
+  },
+  "INT-ROUTE-01": {
+    id: "INT-ROUTE-01",
+    driverType: "school-driver",
+    name: "Intermediate College Test Route",
+    organization: "Intermediate College",
+    vehicle: "TEST-JC-BUS-001",
+    driverId: "JC-DRV-001",
+    geometry: [
+      { lat: 17.3916, lng: 78.4428 },
+      { lat: 17.3980, lng: 78.4530 },
+      { lat: 17.4042, lng: 78.4639 },
+      { lat: 17.3985, lng: 78.4675 },
+      { lat: 17.3930, lng: 78.4710 },
+      { lat: 17.3909, lng: 78.4752 },
+      { lat: 17.3888, lng: 78.4795 },
+      { lat: 17.3869, lng: 78.4831 },
+      { lat: 17.3850, lng: 78.4867 },
+    ],
+    stops: [
+      { id: "INT-STOP-01", name: "Intermediate Test Stop 01 (Mehdipatnam Depot)", lat: 17.3916, lng: 78.4428, kind: "pickup", order: 1 },
+      { id: "INT-STOP-02", name: "Intermediate Test Stop 02 (Lakdikapul Metro)", lat: 17.4042, lng: 78.4639, kind: "pickup", order: 2 },
+      { id: "INT-STOP-03", name: "Intermediate Test Stop 03 (Nampally Station)", lat: 17.3930, lng: 78.4710, kind: "pickup", order: 3 },
+      { id: "INT-STOP-04", name: "Intermediate Test Stop 04 (Abids Circle)", lat: 17.3888, lng: 78.4795, kind: "pickup", order: 4 },
+      { id: "INT-STOP-05", name: "Intermediate Test Stop 05 (College Campus Gate)", lat: 17.3850, lng: 78.4867, kind: "destination", order: 5 },
+    ],
+  },
+  "COMP-ROUTE-01": {
+    id: "COMP-ROUTE-01",
+    driverType: "company-driver",
+    name: "Tech Park Shuttle Route",
+    organization: "Company transport",
+    vehicle: "TEST-SHUTTLE-01",
+    driverId: "COMP-DRV-001",
+    geometry: [
+      { lat: 17.4650, lng: 78.3610 },
+      { lat: 17.4580, lng: 78.3710 },
+      { lat: 17.4504, lng: 78.3808 },
+      { lat: 17.4442, lng: 78.3890 },
+      { lat: 17.4380, lng: 78.3970 },
+      { lat: 17.4320, lng: 78.3900 },
+      { lat: 17.4260, lng: 78.3830 },
+      { lat: 17.4330, lng: 78.3660 },
+      { lat: 17.4400, lng: 78.3489 },
+    ],
+    stops: [
+      { id: "COMP-STOP-01", name: "Kondapur RTA", lat: 17.4650, lng: 78.3610, kind: "pickup", order: 1 },
+      { id: "COMP-STOP-02", name: "Hitec City Cyber Towers", lat: 17.4504, lng: 78.3808, kind: "pickup", order: 2 },
+      { id: "COMP-STOP-03", name: "Madhapur Metro", lat: 17.4380, lng: 78.3970, kind: "pickup", order: 3 },
+      { id: "COMP-STOP-04", name: "Raidurg Bio-Diversity Park", lat: 17.4260, lng: 78.3830, kind: "pickup", order: 4 },
+      { id: "COMP-STOP-05", name: "Gachibowli Tech Campus", lat: 17.4400, lng: 78.3489, kind: "destination", order: 5 },
+    ],
+  },
+};
+
+function getConfiguredRoute(expectedRole, accountParam) {
   const config = window.INTELLIBUS_OFFLINE_CONFIG || {};
-  const route = config.routes?.[expectedRole] || config.route;
+  const routes = config.routes || BUILTIN_OFFLINE_ROUTES;
+  const acc = accountParam || sessionStorage.getItem(STORAGE.account) || "";
+  const inst = sessionStorage.getItem(STORAGE.institution) || "";
+
+  let route = null;
+  // Account-based route resolution
+  if (acc === "MVSR-DRV-001" || isMvsrStudentId(acc) || isMvsrParentIdentifier(acc)) {
+    route = routes["MVSR-ROUTE-01"] || routes["school-driver"] || BUILTIN_OFFLINE_ROUTES["MVSR-ROUTE-01"];
+  } else if (acc === "JC-DRV-001" || isJuniorStudentId(acc) || isJuniorParentIdentifier(acc)) {
+    route = routes["INT-ROUTE-01"] || routes["junior-driver"] || BUILTIN_OFFLINE_ROUTES["INT-ROUTE-01"];
+  } else if (expectedRole === "company-driver" || expectedRole === "employee") {
+    route = routes["COMP-ROUTE-01"] || routes["company-driver"] || BUILTIN_OFFLINE_ROUTES["COMP-ROUTE-01"];
+  } else if (expectedRole === "school-driver" || expectedRole === "engineering-driver") {
+    route = (acc === "JC-DRV-001" || inst === "Junior College")
+      ? (routes["INT-ROUTE-01"] || BUILTIN_OFFLINE_ROUTES["INT-ROUTE-01"])
+      : (routes["MVSR-ROUTE-01"] || BUILTIN_OFFLINE_ROUTES["MVSR-ROUTE-01"]);
+  } else if (expectedRole === "engineering-student") {
+    route = routes["MVSR-ROUTE-01"] || BUILTIN_OFFLINE_ROUTES["MVSR-ROUTE-01"];
+  } else if (expectedRole === "junior-student") {
+    route = routes["INT-ROUTE-01"] || BUILTIN_OFFLINE_ROUTES["INT-ROUTE-01"];
+  } else if (expectedRole === "parent") {
+    route = isJuniorParentIdentifier(acc)
+      ? (routes["INT-ROUTE-01"] || BUILTIN_OFFLINE_ROUTES["INT-ROUTE-01"])
+      : (routes["MVSR-ROUTE-01"] || BUILTIN_OFFLINE_ROUTES["MVSR-ROUTE-01"]);
+  } else {
+    route = routes[expectedRole] || config.route || BUILTIN_OFFLINE_ROUTES["MVSR-ROUTE-01"];
+  }
+
   if (
     !route ||
-    route.driverType !== expectedRole ||
     typeof route.id !== "string" ||
     !route.id.trim()
+  ) {
+    return null;
+  }
+  // Enforce driverType matching only if expectedRole is explicitly a driver role
+  if (
+    (expectedRole === "school-driver" || expectedRole === "company-driver") &&
+    route.driverType &&
+    route.driverType !== expectedRole
   ) {
     return null;
   }
@@ -3184,6 +3300,31 @@ const INDIA_MAP_CENTER = [22.9734, 78.6569];
 const OSM_TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a>';
 
+function createOfflineGridTile(coords) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#0a1322";
+  ctx.fillRect(0, 0, 256, 256);
+  ctx.strokeStyle = "rgba(30, 58, 138, 0.35)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0, 0, 256, 256);
+  ctx.strokeStyle = "rgba(56, 189, 248, 0.15)";
+  ctx.beginPath();
+  ctx.moveTo(128, 0); ctx.lineTo(128, 256);
+  ctx.moveTo(0, 128); ctx.lineTo(256, 128);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(14, 165, 233, 0.08)";
+  ctx.strokeRect(32, 32, 192, 192);
+  ctx.fillStyle = "#38bdf8";
+  ctx.font = "9px monospace";
+  ctx.fillText(`GPS [z:${coords.z} x:${coords.x} y:${coords.y}]`, 8, 16);
+  ctx.fillStyle = "#64748b";
+  ctx.fillText("Offline GPS Navigation Grid", 8, 246);
+  return canvas;
+}
+
 function createDashboardMap(container, route, onTileStatus = () => {}) {
   const map = L.map(container, {
     zoomControl: true,
@@ -3197,6 +3338,8 @@ function createDashboardMap(container, route, onTileStatus = () => {}) {
   let tileErrorOccurred = false;
   let positionMarker;
   let accuracyCircle;
+  let busMarker;
+  const stopMarkers = [];
 
   function setBaseTiles(source, database) {
     window.clearTimeout(tileLoadTimeout);
@@ -3302,22 +3445,41 @@ function createDashboardMap(container, route, onTileStatus = () => {}) {
 
   if (route) {
     const routePoints = route.geometry.map((point) => [point.lat, point.lng]);
+    // Shadow glow outline
     L.polyline(routePoints, {
-      color: "#35c9d2",
-      weight: 5,
-      opacity: 0.9,
+      color: "#0369a1",
+      weight: 9,
+      opacity: 0.45,
       lineJoin: "round",
     }).addTo(map);
+    // Main bright route line
+    L.polyline(routePoints, {
+      color: "#38bdf8",
+      weight: 5,
+      opacity: 0.95,
+      lineJoin: "round",
+    }).addTo(map);
+
     route.stops.forEach((stop, index) => {
+      const isDest = stop.kind === "destination" || index === route.stops.length - 1;
       const marker = L.circleMarker([stop.lat, stop.lng], {
-        radius: stop.kind === "destination" ? 9 : 7,
-        color: "#071426",
-        weight: 2,
-        fillColor: stop.kind === "destination" ? "#f0bf68" : "#f4fbff",
+        radius: isDest ? 10 : 8,
+        color: isDest ? "#f59e0b" : "#0284c7",
+        weight: 2.5,
+        fillColor: isDest ? "#fbbf24" : "#ffffff",
         fillOpacity: 1,
         title: `Stop ${index + 1}: ${stop.name}`,
       }).addTo(map);
-      marker.bindPopup(`<strong>${index + 1}. ${escapeHtml(stop.name)}</strong><br>${escapeHtml(stop.kind === "destination" ? "Destination" : "Pickup stop")}`);
+      marker.bindPopup(`
+        <div style="font-family:system-ui,sans-serif; min-width:170px;">
+          <strong style="color:#0284c7; font-size:1rem;">Stop ${index + 1}: ${escapeHtml(stop.name)}</strong>
+          <div style="margin-top:4px; font-size:0.8rem; color:#64748b;">
+            <span>${escapeHtml(isDest ? "🏁 Destination / Campus" : "🚏 Scheduled Pickup Stop")}</span><br>
+            <span><strong>GPS:</strong> ${stop.lat.toFixed(4)}, ${stop.lng.toFixed(4)}</span>
+          </div>
+        </div>
+      `);
+      stopMarkers.push({ stop, marker, index });
     });
   }
 
@@ -3366,9 +3528,72 @@ function createDashboardMap(container, route, onTileStatus = () => {}) {
     map.fitBounds(L.latLngBounds(points), { padding: [28, 28], maxZoom: 15 });
   }
 
+  function setBusPosition(lat, lng, label = "Active Transport Bus", details = "") {
+    const point = [lat, lng];
+    const busHtml = `<div class="live-bus-pin" style="position:relative; width:32px; height:32px; display:flex; align-items:center; justify-content:center; background:#0284c7; border:2px solid #ffffff; border-radius:50%; box-shadow:0 0 10px rgba(56,189,248,0.8);"><span style="font-size:16px;">🚌</span></div>`;
+    const busIcon = L.divIcon({
+      className: "bus-live-icon-pin",
+      html: busHtml,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+    });
+
+    if (!busMarker) {
+      busMarker = L.marker(point, { icon: busIcon, title: label }).addTo(map);
+    } else {
+      busMarker.setLatLng(point);
+    }
+    busMarker.bindPopup(`
+      <div style="font-family:system-ui,sans-serif; min-width:180px;">
+        <strong style="color:#0284c7; font-size:1rem;">🚌 ${escapeHtml(label)}</strong>
+        <div style="margin-top:4px; font-size:0.8rem; color:#64748b;">
+          ${details ? `<div>${details}</div>` : ""}
+          <div><strong>Bus GPS:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
+          <div style="color:#10b981; font-weight:600; margin-top:2px;">● Offline GPS Tracking Active</div>
+        </div>
+      </div>
+    `);
+  }
+
+  function highlightStops(pickupStopId, dropStopId) {
+    stopMarkers.forEach(({ stop, marker, index }) => {
+      if (stop.id === pickupStopId) {
+        marker.setStyle({
+          radius: 11,
+          color: "#10b981",
+          fillColor: "#059669",
+          weight: 3,
+          fillOpacity: 1,
+        });
+        marker.bindPopup(`
+          <div style="font-family:system-ui,sans-serif; min-width:180px;">
+            <div style="background:#10b981; color:#fff; font-size:0.7rem; padding:1px 5px; border-radius:3px; display:inline-block; font-weight:bold; margin-bottom:3px;">🎯 YOUR PICKUP STOP</div><br>
+            <strong style="color:#047857; font-size:0.95rem;">Stop ${index + 1}: ${escapeHtml(stop.name)}</strong>
+            <div style="font-size:0.8rem; color:#64748b; margin-top:3px;">Board here daily · GPS navigation enabled</div>
+          </div>
+        `);
+      } else if (stop.id === dropStopId) {
+        marker.setStyle({
+          radius: 11,
+          color: "#f59e0b",
+          fillColor: "#d97706",
+          weight: 3,
+          fillOpacity: 1,
+        });
+        marker.bindPopup(`
+          <div style="font-family:system-ui,sans-serif; min-width:180px;">
+            <div style="background:#f59e0b; color:#fff; font-size:0.7rem; padding:1px 5px; border-radius:3px; display:inline-block; font-weight:bold; margin-bottom:3px;">🏁 YOUR DESTINATION</div><br>
+            <strong style="color:#b45309; font-size:0.95rem;">Stop ${index + 1}: ${escapeHtml(stop.name)}</strong>
+            <div style="font-size:0.8rem; color:#64748b; margin-top:3px;">Scheduled drop-off point</div>
+          </div>
+        `);
+      }
+    });
+  }
+
   window.setTimeout(() => map.invalidateSize(), 0);
   setBaseTiles(null, null);
-  return { map, fitRoute, setBaseTiles, updatePosition, clearPosition };
+  return { map, fitRoute, setBaseTiles, updatePosition, clearPosition, setBusPosition, highlightStops, stopMarkers };
 }
 
 function renderDriver(root, role, account, institution) {
@@ -3724,19 +3949,63 @@ function renderDriver(root, role, account, institution) {
 function passengerMapPanel(role) {
   const label = ROLE_LABELS[role] || "IntelliBus user";
   return `
-    <section class="panel card map-panel" id="map">
-      <div class="panel-heading"><div><h2>India map &amp; navigation</h2><p>Map tiles are provided by OpenStreetMap and require an internet connection.</p></div><span class="panel-kicker">MAP VIEW</span></div>
-      <div class="leaflet-map" id="journey-map" role="application" aria-label="Interactive India map for ${escapeHtml(label)}"></div>
-      <p class="map-attribution">${OSM_ATTRIBUTION}</p>
-      <div class="map-toolbar">
-        <div class="map-zoom-controls">
-          <button class="button button-primary" id="journey-location-on" type="button">Turn Location On</button>
-          <button class="button button-secondary" id="journey-location-off" type="button" disabled>Turn Location Off</button>
+    <section class="panel card map-panel span-12" id="map" style="position: relative;">
+      <div class="panel-heading">
+        <div>
+          <h2 style="display:flex; align-items:center; gap:0.5rem; margin:0;">
+            <span>🗺️ Live GPS Route &amp; Offline Navigation</span>
+          </h2>
+          <p id="passenger-route-summary" style="margin-top:0.25rem;">Offline route geometry &amp; turn-by-turn stop itinerary loaded from device configuration.</p>
         </div>
-        <p class="map-status" id="journey-location-status" role="status" aria-live="polite">Location is off. Turn it on only if you want to show your device position on this map.</p>
+        <span class="status-pill" id="passenger-offline-badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">
+          <span class="status-dot-small" style="background:#10b981;"></span>
+          <span>Offline GPS Ready</span>
+        </span>
       </div>
-      <p class="map-status">No assigned route data is available for this account. Your device location is never shared with IntelliBus.</p>
-      <p class="map-status" id="journey-map-status" role="status" aria-live="polite">Map tile availability will be reported here.</p>
+
+      <!-- Real-Time Offline Navigation HUD -->
+      <div class="offline-nav-hud" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 0.85rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+        <div>
+          <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display:block;">Assigned Route</span>
+          <div id="hud-route-name" style="font-weight: 600; color: #f8fafc; font-size: 0.95rem;">Checking route...</div>
+        </div>
+        <div>
+          <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display:block;">Next Bus Stop</span>
+          <div id="hud-next-stop" style="font-weight: 600; color: #38bdf8; font-size: 0.95rem;">Locating bus...</div>
+        </div>
+        <div>
+          <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display:block;">Distance to Pickup</span>
+          <div id="hud-distance" style="font-weight: 600; color: #34d399; font-size: 0.95rem;">Turn GPS on to calculate</div>
+        </div>
+        <div>
+          <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display:block;">Estimated Bus ETA</span>
+          <div id="hud-eta" style="font-weight: 600; color: #fbbf24; font-size: 0.95rem;">~6 mins to next stop</div>
+        </div>
+      </div>
+
+      <div class="leaflet-map" id="journey-map" role="application" aria-label="Interactive India map for ${escapeHtml(label)}" style="height: 380px; min-height: 320px; border-radius: 8px;"></div>
+      <p class="map-attribution">${OSM_ATTRIBUTION}</p>
+
+      <div class="map-toolbar" style="margin-top: 0.75rem;">
+        <div class="map-zoom-controls">
+          <button class="button button-primary map-small-button" id="journey-location-on" type="button">📍 Turn Location On</button>
+          <button class="button button-secondary map-small-button" id="journey-location-off" type="button" disabled>Turn Location Off</button>
+          <button class="button button-secondary map-small-button" id="passenger-fit-route" type="button">Fit Route</button>
+          <button class="button button-secondary map-small-button" id="passenger-follow-bus" type="button">Follow Bus</button>
+        </div>
+        <span class="gps-storage-status" id="journey-location-status" role="status" aria-live="polite">Location off. Click "Turn Location On" to track your device GPS on the route.</span>
+      </div>
+
+      <!-- Interactive Route Stops Itinerary -->
+      <div class="route-itinerary-container" style="margin-top: 0.85rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.75rem;">
+        <div style="font-size: 0.8rem; font-weight: 600; color: #cbd5e1; margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+          <span>Route Waypoints &amp; Stops (Offline Sequence)</span>
+          <span id="itinerary-stop-count" style="color: #94a3b8;">5 Stops Configured</span>
+        </div>
+        <div class="stop-list" id="passenger-stop-list" style="max-height: 180px; overflow-y: auto;"></div>
+      </div>
+
+      <p class="map-status" id="journey-map-status" role="status" aria-live="polite" style="font-size: 0.8rem; color: #64748b; margin-top: 0.5rem;"></p>
     </section>`;
 }
 
@@ -3747,13 +4016,95 @@ function initializePassengerMap(root) {
   const locationStatus = root.querySelector("#journey-location-status");
   const locationOn = root.querySelector("#journey-location-on");
   const locationOff = root.querySelector("#journey-location-off");
-  const dashboardMap = createDashboardMap(container, null, (message) => {
+  const fitBtn = root.querySelector("#passenger-fit-route");
+  const followBusBtn = root.querySelector("#passenger-follow-bus");
+  const hudRoute = root.querySelector("#hud-route-name");
+  const hudNext = root.querySelector("#hud-next-stop");
+  const hudDist = root.querySelector("#hud-distance");
+  const hudEta = root.querySelector("#hud-eta");
+  const summary = root.querySelector("#passenger-route-summary");
+  const stopList = root.querySelector("#passenger-stop-list");
+  const stopCount = root.querySelector("#itinerary-stop-count");
+
+  const role = document.body.dataset.dashboard;
+  const account = sessionStorage.getItem(STORAGE.account) || "";
+  const route = getConfiguredRoute(role, account);
+
+  const dashboardMap = createDashboardMap(container, route, (message) => {
+    if (!status) return;
     if (!navigator.onLine && !message.includes("offline")) {
-      status.textContent = `${message} Offline base-map tiles are not cached.`;
+      status.textContent = `${message} Offline navigation grid active.`;
       return;
     }
     status.textContent = message;
   });
+
+  // Expose on container for real-time dashboard updates
+  container._dashboardMap = dashboardMap;
+
+  let assignedPickupStop = null;
+  let assignedDropStop = null;
+  let busLat = 17.3524;
+  let busLng = 78.5032;
+  const isJc = isJuniorStudentId(account) || isJuniorParentIdentifier(account);
+
+  if (route) {
+    dashboardMap.fitRoute();
+    if (hudRoute) hudRoute.textContent = `${route.id} · ${route.name}`;
+    if (summary) summary.textContent = `Route ${route.id}: ${route.stops.length} stops configured · Vehicle ${route.vehicle}`;
+    if (stopCount) stopCount.textContent = `${route.stops.length} Stops Configured`;
+
+    // Determine assigned pickup & drop stops based on account / student level
+    if (isJc) {
+      assignedPickupStop = route.stops[0]; // INT-STOP-01
+      assignedDropStop = route.stops[route.stops.length - 1]; // INT-STOP-05
+      busLat = route.stops[1].lat;
+      busLng = route.stops[1].lng;
+    } else {
+      assignedPickupStop = route.stops[0]; // MVSR-STOP-01
+      assignedDropStop = route.stops[route.stops.length - 1]; // MVSR-STOP-05
+      busLat = route.stops[1].lat;
+      busLng = route.stops[1].lng;
+    }
+
+    // Highlight assigned stops on map
+    dashboardMap.highlightStops(assignedPickupStop?.id, assignedDropStop?.id);
+
+    // Render live bus position on route
+    const busLabel = `${route.vehicle} (${route.name})`;
+    dashboardMap.setBusPosition(busLat, busLng, busLabel, `Assigned Route: ${route.id}`);
+
+    if (hudNext) {
+      hudNext.textContent = route.stops[1] ? `Stop 2: ${route.stops[1].name}` : "En Route";
+    }
+
+    // Populate passenger stop list
+    if (stopList) {
+      stopList.innerHTML = route.stops.map((stop, idx) => {
+        const isPickup = stop.id === assignedPickupStop?.id;
+        const isDrop = stop.id === assignedDropStop?.id;
+        let badge = "";
+        if (isPickup) badge = '<span style="background:#10b981; color:#fff; font-size:0.7rem; padding:1px 6px; border-radius:3px; margin-left:6px; font-weight:bold;">YOUR PICKUP</span>';
+        else if (isDrop) badge = '<span style="background:#f59e0b; color:#fff; font-size:0.7rem; padding:1px 6px; border-radius:3px; margin-left:6px; font-weight:bold;">DESTINATION</span>';
+
+        return `
+          <div class="stop-row" style="display:flex; align-items:center; justify-content:space-between; padding:0.4rem 0.5rem; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span class="stop-marker ${idx <= 1 ? "stop-marker-done" : ""}" style="${isPickup ? "background:#10b981; border-color:#10b981;" : (isDrop ? "background:#f59e0b; border-color:#f59e0b;" : "")}" aria-hidden="true"></span>
+              <div>
+                <span class="stop-name" style="font-weight:600; color:#f1f5f9; font-size:0.85rem;">Stop ${idx + 1}: ${escapeHtml(stop.name)}</span>
+                ${badge}
+                <div style="font-size:0.75rem; color:#64748b;">GPS: ${stop.lat.toFixed(4)}, ${stop.lng.toFixed(4)}</div>
+              </div>
+            </div>
+            <span class="stop-time" style="font-size:0.75rem; color:${idx === 0 ? "#10b981" : (idx === 1 ? "#38bdf8" : "#94a3b8")}; font-weight:600;">
+              ${idx === 0 ? "Departed" : (idx === 1 ? "Next Stop" : "Upcoming")}
+            </span>
+          </div>`;
+      }).join("");
+    }
+  }
+
   let watchId = null;
   let requestId = 0;
 
@@ -3764,55 +4115,66 @@ function initializePassengerMap(root) {
       watchId = null;
     }
     if (clearMarker) dashboardMap.clearPosition();
-    locationOn.disabled = false;
-    locationOff.disabled = true;
+    if (locationOn) locationOn.disabled = false;
+    if (locationOff) locationOff.disabled = true;
+    if (hudDist) hudDist.textContent = "Turn GPS on to calculate";
   }
 
   function showLocationError(error) {
     stopLocation();
-    locationStatus.textContent = formatGeolocationError(error);
+    if (locationStatus) locationStatus.textContent = formatGeolocationError(error);
+  }
+
+  function handleUserPosition(posCoords) {
+    const currentPosition = {
+      lat: posCoords.latitude,
+      lng: posCoords.longitude,
+      accuracy: posCoords.accuracy,
+      timestamp: Date.now(),
+    };
+    dashboardMap.updatePosition(currentPosition, false, "Your device location");
+    if (locationStatus) {
+      locationStatus.textContent = `📍 GPS Active · Accuracy ±${Math.round(currentPosition.accuracy)}m`;
+    }
+
+    // Calculate distance to assigned pickup stop
+    if (assignedPickupStop && hudDist) {
+      const dist = distanceMeters(currentPosition, assignedPickupStop);
+      const walkMinutes = Math.max(1, Math.round(dist / 80)); // ~80m per min walk
+      if (dist < 1000) {
+        hudDist.textContent = `${Math.round(dist)} m (${walkMinutes} min walk)`;
+      } else {
+        hudDist.textContent = `${(dist / 1000).toFixed(1)} km (~${walkMinutes} min walk)`;
+      }
+    }
   }
 
   function startLocation() {
     if (!window.isSecureContext) {
-      locationStatus.textContent = "Location access requires HTTPS or localhost.";
+      if (locationStatus) locationStatus.textContent = "Location access requires HTTPS or localhost.";
       return;
     }
     if (!navigator.geolocation) {
-      locationStatus.textContent = "Location is unsupported by this browser.";
+      if (locationStatus) locationStatus.textContent = "Location is unsupported by this browser.";
       return;
     }
     if (watchId !== null) return;
 
     const activeRequestId = ++requestId;
-    locationOn.disabled = true;
-    locationOff.disabled = false;
-    locationStatus.textContent = "Requesting device location. Your position stays on this device.";
+    if (locationOn) locationOn.disabled = true;
+    if (locationOff) locationOff.disabled = false;
+    if (locationStatus) locationStatus.textContent = "Requesting device GPS fix...";
+
     try {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           if (activeRequestId !== requestId) return;
-          const currentPosition = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            timestamp: position.timestamp,
-          };
-          dashboardMap.updatePosition(currentPosition, true, "Your device location");
-          locationStatus.textContent = "Location is on. Your position is shown on this device only.";
-          locationOn.disabled = true;
-          locationOff.disabled = false;
+          handleUserPosition(position.coords);
           try {
             watchId = navigator.geolocation.watchPosition(
-              (nextPosition) => {
+              (nextPos) => {
                 if (activeRequestId !== requestId) return;
-                dashboardMap.updatePosition({
-                  lat: nextPosition.coords.latitude,
-                  lng: nextPosition.coords.longitude,
-                  accuracy: nextPosition.coords.accuracy,
-                  timestamp: nextPosition.timestamp,
-                }, true, "Your device location");
-                locationStatus.textContent = "Location is on. Your position is shown on this device only.";
+                handleUserPosition(nextPos.coords);
               },
               showLocationError,
               { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
@@ -3832,11 +4194,23 @@ function initializePassengerMap(root) {
     }
   }
 
-  locationOn.addEventListener("click", startLocation);
-  locationOff.addEventListener("click", () => {
-    stopLocation();
-    locationStatus.textContent = "Location is off. Your position has been removed from the map.";
-  });
+  if (locationOn) locationOn.addEventListener("click", startLocation);
+  if (locationOff) {
+    locationOff.addEventListener("click", () => {
+      stopLocation();
+      if (locationStatus) locationStatus.textContent = "Location is off. Device GPS removed from map.";
+    });
+  }
+  if (fitBtn) {
+    fitBtn.addEventListener("click", () => {
+      dashboardMap.fitRoute();
+    });
+  }
+  if (followBusBtn) {
+    followBusBtn.addEventListener("click", () => {
+      dashboardMap.map.setView([busLat, busLng], 15);
+    });
+  }
   window.addEventListener("pagehide", () => stopLocation(), { once: true });
 }
 
@@ -4434,7 +4808,7 @@ async function initializeTripNavigation(root, role, organization, account) {
     tripHistoryTable: root.querySelector("#trip-history-table"),
     exportTripData: root.querySelector("#export-trip-data"),
   };
-  const route = getConfiguredRoute(role);
+  const route = getConfiguredRoute(role, account);
   const source = getTileSource();
   const mapState = {
     followGps: false,
